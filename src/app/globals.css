@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-paper-off font-sans text-ink;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+  ::selection {
+    background: #e4daff;
+  }
+  :focus-visible {
+    outline: 2px solid #8257ff;
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-3xl border border-paper-line bg-white shadow-card;
+  }
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[.97] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-ink text-white hover:bg-[#2a2740] hover:shadow-lift;
+  }
+  .btn-brand {
+    @apply btn bg-brand-grad text-white shadow-glow hover:brightness-105 hover:shadow-pop;
+  }
+  .btn-ghost {
+    @apply btn text-ink-soft hover:bg-paper-soft hover:text-ink;
+  }
+  .btn-outline {
+    @apply btn border border-paper-line bg-white text-ink hover:border-ink-faint hover:shadow-card;
+  }
+  .input {
+    @apply w-full rounded-2xl border border-paper-line bg-white px-4 py-3 text-[15px] text-ink outline-none transition placeholder:text-ink-faint focus:border-grape focus:ring-4 focus:ring-grape/10;
+  }
+  .label {
+    @apply mb-1.5 block text-[13px] font-semibold text-ink-soft;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[.14em] text-ink-mute;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
+
+/* Leaflet tweaks for the hackathon map */
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: #f4f6fb;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 20px !important;
+  box-shadow: 0 18px 40px -12px rgba(21, 19, 31, 0.2) !important;
+}
+.leaflet-control-attribution {
+  font-size: 10px !important;
+  border-radius: 8px 0 0 0;
+}
+.hg-marker {
+  background: transparent !important;
+  border: none !important;
+}

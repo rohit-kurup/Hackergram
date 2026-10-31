@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.env.local
+prisma/*.db
+prisma/*.db-journal
+public/uploads/*
+!public/uploads/.gitkeep
+next-env.d.ts
+*.tsbuildinfo
+.claude-flow
+cj.txt

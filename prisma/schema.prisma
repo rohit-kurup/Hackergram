@@ -1,0 +1,451 @@
+// Hackergram data model.
+// Local dev runs on SQLite; switch `provider` to "postgresql" for Supabase/Postgres (see README).
+// List-like fields (skills, tags, topics...) are stored as JSON-encoded strings so the
+// schema stays portable across SQLite and Postgres. Helpers live in src/lib/json.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String?
+  name              String
+  username          String    @unique
+  image             String?
+  bio               String    @default("")
+  headline          String    @default("")
+  location          String    @default("")
+  lat               Float?
+  lng               Float?
+  university        String    @default("")
+  major             String    @default("")
+  gradYear          Int?
+  company           String    @default("")
+  interests         String    @default("[]")
+  languages         String    @default("[]")
+  technologies      String    @default("[]")
+  projectTypes      String    @default("[]")
+  lookingForCollab  Boolean   @default(true)
+  openToHackathons  Boolean   @default(true)
+  availability      String    @default("Weekends")
+  accent            String    @default("purple")
+  onboarded         Boolean   @default(false)
+  isAdmin           Boolean   @default(false)
+  isSample          Boolean   @default(false)
+  githubUsername    String?
+  githubConnectedAt DateTime?
+  githubSyncedAt    DateTime?
+  githubStats       String    @default("{}")
+  githubScopes      String    @default("")
+  aiSummary         String?
+  aiSummaryModel    String?
+  aiSummaryAt       DateTime?
+  privacy           String    @default("{}")
+  lastSeenAt        DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  resetTokens     PasswordResetToken[]
+  repos           GithubRepo[]
+  activity        GithubActivity[]
+  education       Education[]
+  experience      Experience[]
+  projects        Project[]            @relation("ProjectOwner")
+  memberships     ProjectMember[]
+  posts           Post[]
+  comments        Comment[]
+  likes           Like[]
+  bookmarks       Bookmark[]
+  followers       Follow[]             @relation("Following")
+  following       Follow[]             @relation("Follower")
+  swipesMade      Swipe[]              @relation("Swiper")
+  swipesReceived  Swipe[]              @relation("SwipeTarget")
+  matchesA        Match[]              @relation("MatchA")
+  matchesB        Match[]              @relation("MatchB")
+  conversations   ConversationMember[]
+  messages        Message[]
+  attendance      EventAttendance[]
+  notifications   Notification[]       @relation("NotifRecipient")
+  notifsSent      Notification[]       @relation("NotifActor")
+  aiDrafts        AiDraft[]
+  submittedEvents Hackathon[]          @relation("EventSubmitter")
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  accessTokenEnc    String
+  scope             String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id // sha256 of the cookie token, the raw token is never stored
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id // sha256 of the token
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GithubRepo {
+  id          String    @id @default(cuid())
+  userId      String
+  githubId    Int
+  name        String
+  fullName    String
+  description String    @default("")
+  url         String
+  homepage    String    @default("")
+  language    String?
+  languages   String    @default("{}")
+  topics      String    @default("[]")
+  stars       Int       @default(0)
+  forks       Int       @default(0)
+  isPrivate   Boolean   @default(false)
+  isFork      Boolean   @default(false)
+  readme      String?
+  pushedAt    DateTime?
+  createdAtGh DateTime?
+  syncedAt    DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, githubId])
+  @@index([userId])
+}
+
+model GithubActivity {
+  id         String   @id @default(cuid())
+  userId     String
+  eventId    String
+  type       String
+  repo       String
+  title      String
+  url        String   @default("")
+  occurredAt DateTime
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([userId, occurredAt])
+}
+
+model Education {
+  id        String @id @default(cuid())
+  userId    String
+  school    String
+  degree    String @default("")
+  field     String @default("")
+  startYear Int?
+  endYear   Int?
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Experience {
+  id          String  @id @default(cuid())
+  userId      String
+  kind        String  @default("job") // job | internship | certification
+  title       String
+  org         String
+  start       String  @default("")
+  end         String  @default("")
+  description String  @default("")
+  current     Boolean @default(false)
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Project {
+  id               String   @id @default(cuid())
+  ownerId          String
+  title            String
+  tagline          String   @default("")
+  description      String   @default("")
+  thumbnail        String?
+  color            String   @default("blue")
+  tech             String   @default("[]")
+  category         String   @default("Web")
+  repoUrl          String   @default("")
+  demoUrl          String   @default("")
+  stars            Int      @default(0)
+  forks            Int      @default(0)
+  source           String   @default("manual") // manual | github
+  githubRepoId     String?
+  pinned           Boolean  @default(false)
+  // Recruiting listing fields
+  isListing        Boolean  @default(false)
+  rolesNeeded      String   @default("[]")
+  requiredSkills   String   @default("[]")
+  teamSize         Int      @default(4)
+  stage            String   @default("Idea") // Idea | Prototype | MVP | Launched
+  commitment       String   @default("5-10 hrs/week")
+  remote           Boolean  @default(true)
+  location         String   @default("")
+  beginnerFriendly Boolean  @default(false)
+  status           String   @default("open")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members ProjectMember[]
+  posts   Post[]
+
+  @@index([ownerId])
+  @@index([isListing, status])
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("Member")
+  status    String   @default("active") // active | invited | requested
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  authorId    String
+  kind        String     @default("update") // update | project | question | hackathon | collab | repo
+  content     String
+  imageUrl    String?
+  projectId   String?
+  repoUrl     String?
+  repoPreview String?
+  hackathonId String?
+  repostOfId  String?
+  createdAt   DateTime   @default(now())
+  author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  hackathon   Hackathon? @relation(fields: [hackathonId], references: [id], onDelete: SetNull)
+  repostOf    Post?      @relation("Reposts", fields: [repostOfId], references: [id], onDelete: Cascade)
+  reposts     Post[]     @relation("Reposts")
+  comments    Comment[]
+  likes       Like[]
+  bookmarks   Bookmark[]
+
+  @@index([createdAt])
+  @@index([authorId])
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  postId    String
+  authorId  String
+  parentId  String?
+  content   String
+  createdAt DateTime  @default(now())
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("Replies")
+
+  @@index([postId])
+}
+
+model Like {
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+}
+
+model Bookmark {
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+}
+
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+}
+
+model Swipe {
+  id        String   @id @default(cuid())
+  swiperId  String
+  targetId  String
+  direction String // left | right | super
+  context   String   @default("global") // "global" or a project id
+  createdAt DateTime @default(now())
+  swiper    User     @relation("Swiper", fields: [swiperId], references: [id], onDelete: Cascade)
+  target    User     @relation("SwipeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([swiperId, targetId, context])
+  @@index([targetId])
+}
+
+model Match {
+  id             String   @id @default(cuid())
+  userAId        String
+  userBId        String
+  context        String   @default("global")
+  conversationId String?
+  createdAt      DateTime @default(now())
+  userA          User     @relation("MatchA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB          User     @relation("MatchB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId, context])
+}
+
+model Conversation {
+  id        String               @id @default(cuid())
+  kind      String               @default("direct") // direct | group | project
+  title     String?
+  projectId String?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  members   ConversationMember[]
+  messages  Message[]
+}
+
+model ConversationMember {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime     @default(now())
+  typingAt       DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  kind           String       @default("text") // text | image | repo | invite | system
+  content        String
+  meta           String       @default("{}")
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Hackathon {
+  id               String            @id @default(cuid())
+  name             String
+  description      String            @default("")
+  category         String            @default("hackathon") // hackathon | meetup | startup | competition | conference
+  startsAt         DateTime
+  endsAt           DateTime?
+  deadline         DateTime?
+  city             String            @default("")
+  venue            String            @default("")
+  university       String            @default("")
+  lat              Float?
+  lng              Float?
+  isOnline         Boolean           @default(false)
+  organizer        String            @default("")
+  prize            String            @default("")
+  prizeAmount      Int               @default(0)
+  website          String            @default("")
+  skills           String            @default("[]")
+  themes           String            @default("[]")
+  beginnerFriendly Boolean           @default(false)
+  participants     Int?
+  source           String            @default("community") // sample | devpost | community
+  externalId       String?           @unique
+  verified         Boolean           @default(false)
+  status           String            @default("pending") // pending | approved | rejected
+  submittedById    String?
+  createdAt        DateTime          @default(now())
+  submittedBy      User?             @relation("EventSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  attendance       EventAttendance[]
+  posts            Post[]
+  aiDrafts         AiDraft[]
+
+  @@index([status, startsAt])
+}
+
+model EventAttendance {
+  userId         String
+  hackathonId    String
+  lookingForTeam Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hackathon      Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, hackathonId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  actorId   String?
+  type      String // follow | match | message | like | comment | invite | collab | reminder | event | team
+  title     String
+  body      String    @default("")
+  href      String    @default("")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation("NotifRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor     User?     @relation("NotifActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
+
+model AiDraft {
+  id          String     @id @default(cuid())
+  userId      String
+  hackathonId String?
+  kind        String // application | idea | team | skillgap | readme | description | chat
+  title       String
+  input       String     @default("{}")
+  content     String
+  model       String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hackathon   Hackathon? @relation(fields: [hackathonId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
